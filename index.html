@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modern Web Calendar</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary-gray: #4a5568;
+            --light-gray: #e2e8f0;
+            --medium-gray: #cbd5e0;
+            --dark-gray: #2d3748;
+            --accent-blue: #3182ce;
+            --white: #ffffff;
+            --text-primary: #2d3748;
+            --text-secondary: #718096;
+            --today-color: #3182ce;
+            --hover-color: #f7fafc;
+            --today-circle: #3182ce;
+            --border-color: #e2e8f0;
+            --shadow: rgba(0,0,0,0.1);
+        }
+
+        [data-theme="dark"] {
+            --primary-gray: #2d3748;
+            --light-gray: #4a5568;
+            --medium-gray: #718096;
+            --dark-gray: #1a202c;
+            --accent-blue: #63b3ed;
+            --white: #1a202c;
+            --text-primary: #f7fafc;
+            --text-secondary: #a0aec0;
+            --today-color: #63b3ed;
+            --hover-color: #2d3748;
+            --today-circle: #63b3ed;
+            --border-color: #4a5568;
+            --shadow: rgba(0,0,0,0.3);
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--white);
+            color: var(--text-primary);
+            line-height: 1.6;
+            transition: background-color 0.3s ease, color 0.3s ease;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary-gray), var(--dark-gray));
+            color: white;
+            padding: 2rem 0;
+            text-align: center;
+            margin-bottom: 2rem;
+            border-radius: 12px;
+            box-shadow: 0 4px 20px var(--shadow);
+            position: relative;
+        }
+
+        .theme-toggle {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            background: rgba(255, 255, 255, 0.2);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50px;
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            color: white;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            backdrop-filter: blur(10px);
+        }
+
+        .theme-toggle:hover {
+            background: rgba(255, 255, 255, 0.3);
+            transform: scale(1.05);
+        }
+
+        h1 {
+            font-size: 2.5rem;
+            font-weight: 300;
+            margin-bottom: 0.5rem;
+        }
+
+        .subtitle {
+            font-size: 1.1rem;
+            opacity: 0.9;
+        }
+
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 2rem;
+            gap: 1rem;
+            padding: 1.5rem;
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 2px 10px var(--shadow);
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .nav-controls {
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+        }
+
+        .btn {
+            padding: 0.75rem 1.5rem;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.95rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            background: var(--light-gray);
+            color: var(--text-primary);
+        }
+
+        .btn:hover {
+            background: var(--medium-gray);
+            transform: translateY(-1px);
+        }
+
+        .btn.active {
+            background: var(--accent-blue);
+            color: white;
+        }
+
+        .btn-primary {
+            background: var(--primary-gray);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background: var(--dark-gray);
+        }
+
+        .current-period {
+            font-size: 1.5rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            min-width: 250px;
+            text-align: center;
+        }
+
+        .view-buttons {
+            display: flex;
+            gap: 0.5rem;
+        }
+
+        .settings {
+            display: flex;
+            gap: 1rem;
+            align-items: center;
+        }
+
+        select {
+            padding: 0.5rem;
+            border: 2px solid var(--border-color);
+            border-radius: 6px;
+            background: var(--white);
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            min-width: 120px;
+            transition: all 0.3s ease;
+        }
+
+        .calendar-container {
+            background: var(--white);
+            border-radius: 12px;
+            box-shadow: 0 4px 20px var(--shadow);
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        /* Month View Styles */
+        .month-view {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background: var(--light-gray);
+        }
+
+        .day-header {
+            background: var(--primary-gray);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .day-cell {
+            background: var(--white);
+            min-height: 100px;
+            padding: 0.75rem;
+            border: none;
+            position: relative;
+            cursor: pointer;
+            transition: background-color 0.2s ease;
+        }
+
+        .day-cell:hover {
+            background: var(--hover-color);
+        }
+
+        .day-cell.other-month {
+            color: var(--text-secondary);
+            background: var(--light-gray);
+            opacity: 0.6;
+        }
+
+        .day-cell.today {
+            position: relative;
+        }
+
+        .day-cell.today .day-number {
+            background: var(--today-circle);
+            color: white;
+            width: 35px;
+            height: 35px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            margin: 0 auto;
+        }
+
+        .day-number {
+            font-size: 1.1rem;
+            font-weight: 500;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+
+        /* Week View Styles */
+        .week-view {
+            display: grid;
+            grid-template-columns: 80px repeat(7, 1fr);
+            gap: 1px;
+            background: var(--light-gray);
+        }
+
+        .time-slot {
+            background: var(--primary-gray);
+            color: white;
+            padding: 0.5rem;
+            text-align: center;
+            font-size: 0.8rem;
+            font-weight: 500;
+        }
+
+        .hour-cell {
+            background: var(--white);
+            min-height: 60px;
+            border: none;
+            position: relative;
+        }
+
+        .day-header.today {
+            background: var(--today-circle);
+            position: relative;
+        }
+
+        .day-header.today::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            border: 3px solid white;
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        /* Year View Styles */
+        .year-view {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 2rem;
+            padding: 1rem;
+        }
+
+        .mini-month {
+            background: var(--white);
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border-color);
+            transition: all 0.3s ease;
+        }
+
+        .mini-month-header {
+            background: var(--primary-gray);
+            color: white;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .mini-calendar {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            background: var(--light-gray);
+        }
+
+        .mini-day {
+            background: var(--white);
+            padding: 0.5rem;
+            text-align: center;
+            min-height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .mini-day:hover {
+            background: var(--hover-color);
+        }
+
+        .mini-day.today {
+            position: relative;
+        }
+
+        .mini-day.today::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 25px;
+            height: 25px;
+            border: 2px solid var(--today-circle);
+            border-radius: 50%;
+            pointer-events: none;
+        }
+
+        .mini-day.other-month {
+            color: var(--text-secondary);
+            background: var(--light-gray);
+            opacity: 0.6;
+        }
+
+        /* Daily View Styles */
+        .daily-view {
+            padding: 1rem;
+        }
+
+        .daily-header {
+            text-align: center;
+            padding: 2rem;
+            background: var(--primary-gray);
+            color: white;
+            font-size: 1.5rem;
+            font-weight: 300;
+        }
+
+        .time-grid {
+            display: grid;
+            grid-template-columns: 80px 1fr;
+            gap: 1px;
+            background: var(--light-gray);
+        }
+
+        .hour-label {
+            background: var(--primary-gray);
+            color: white;
+            padding: 1rem 0.5rem;
+            text-align: center;
+            font-size: 0.9rem;
+        }
+
+        .hour-block {
+            background: var(--white);
+            min-height: 60px;
+            border: none;
+            position: relative;
+            cursor: pointer;
+        }
+
+        .hour-block:hover {
+            background: var(--hover-color);
+        }
+
+        .current-time {
+            font-weight: bold;
+            color: var(--accent-blue);
+            text-align: center;
+            margin: 1rem 0;
+            font-size: 1.2rem;
+        }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .container {
+                padding: 10px;
+            }
+
+            h1 {
+                font-size: 2rem;
+            }
+
+            .theme-toggle {
+                position: static;
+                margin: 1rem auto 0;
+                display: block;
+                width: fit-content;
+            }
+
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+                text-align: center;
+            }
+
+            .nav-controls, .view-buttons, .settings {
+                justify-content: center;
+            }
+
+            .current-period {
+                min-width: auto;
+                font-size: 1.2rem;
+            }
+
+            .day-cell {
+                min-height: 80px;
+                padding: 0.5rem;
+            }
+
+            .year-view {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        .loading {
+            text-align: center;
+            padding: 2rem;
+            color: var(--text-secondary);
+        }
+
+        .timezone-info {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            text-align: center;
+            margin-top: 1rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <button class="theme-toggle" onclick="toggleTheme()">
+                🌙 Dark Mode
+            </button>
+            <h1>Modern Web Calendar</h1>
+            <p class="subtitle">A responsive, multi-view calendar with timezone support.</p>
+        </header>
+
+        <div class="controls">
+            <div class="nav-controls">
+                <button class="btn btn-primary" onclick="navigatePeriod(-1)">‹ Previous</button>
+                <button class="btn" onclick="goToToday()">Today</button>
+                <button class="btn btn-primary" onclick="navigatePeriod(1)">Next ›</button>
+            </div>
+
+            <div class="current-period" id="currentPeriod">
+                Loading...
+            </div>
+
+            <div class="view-buttons">
+                <button class="btn" onclick="setView('daily')" data-view="daily">Day</button>
+                <button class="btn" onclick="setView('weekly')" data-view="weekly">Week</button>
+                <button class="btn active" onclick="setView('monthly')" data-view="monthly">Month</button>
+                <button class="btn" onclick="setView('yearly')" data-view="yearly">Year</button>
+            </div>
+
+            <div class="settings">
+                <select id="timezoneSelect" onchange="changeTimezone()">
+                    <option value="auto">Auto Timezone</option>
+                </select>
+                <select id="localeSelect" onchange="changeLocale()">
+                    <option value="auto">Auto Language</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="calendar-container">
+            <div id="calendarContent" class="loading">
+                Loading calendar...
+            </div>
+        </div>
+
+        <div class="timezone-info" id="timezoneInfo"></div>
+    </div>
+
+    <script>
+        class ModernCalendar {
+            constructor() {
+                this.currentDate = new Date();
+                this.today = new Date();
+                this.currentView = 'monthly';
+                this.timezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                this.locale = navigator.language || 'en-US';
+                this.isDarkMode = localStorage.getItem('darkMode') === 'true';
+                this.availableTimezones = [
+                    'America/New_York', 'America/Chicago', 'America/Denver', 'America/Los_Angeles',
+                    'Europe/London', 'Europe/Paris', 'Europe/Berlin', 'Europe/Rome',
+                    'Asia/Tokyo', 'Asia/Shanghai', 'Asia/Dubai', 'Asia/Kolkata',
+                    'Australia/Sydney', 'Pacific/Auckland'
+                ];
+                this.availableLocales = [
+                    { code: 'en-US', name: 'English (US)' },
+                    { code: 'en-GB', name: 'English (UK)' },
+                    { code: 'es-ES', name: 'Español' },
+                    { code: 'fr-FR', name: 'Français' },
+                    { code: 'de-DE', name: 'Deutsch' },
+                    { code: 'it-IT', name: 'Italiano' },
+                    { code: 'pt-BR', name: 'Português' },
+                    { code: 'ja-JP', name: '日本語' },
+                    { code: 'zh-CN', name: '中文' },
+                    { code: 'ko-KR', name: '한국어' }
+                ];
+                
+                this.init();
+            }
+
+            init() {
+                this.applyTheme();
+                this.populateTimezones();
+                this.populateLocales();
+                this.updateTimezoneInfo();
+                this.render();
+                this.updateCurrentTime();
+                
+                // Update the current time every minute.
+                setInterval(() => this.updateCurrentTime(), 60000);
+            }
+
+            applyTheme() {
+                const body = document.body;
+                const themeToggle = document.querySelector('.theme-toggle');
+                
+                if (this.isDarkMode) {
+                    body.setAttribute('data-theme', 'dark');
+                    themeToggle.innerHTML = '☀️ Light Mode';
+                } else {
+                    body.removeAttribute('data-theme');
+                    themeToggle.innerHTML = '🌙 Dark Mode';
+                }
+            }
+
+            toggleTheme() {
+                this.isDarkMode = !this.isDarkMode;
+                localStorage.setItem('darkMode', this.isDarkMode);
+                this.applyTheme();
+            }
+
+            populateTimezones() {
+                const select = document.getElementById('timezoneSelect');
+                const currentTz = Intl.DateTimeFormat().resolvedOptions().timeZone;
+                
+                // Add current timezone if not in the list.
+                if (!this.availableTimezones.includes(currentTz)) {
+                    this.availableTimezones.unshift(currentTz);
+                }
+
+                this.availableTimezones.forEach(tz => {
+                    const option = document.createElement('option');
+                    option.value = tz;
+                    option.textContent = tz.replace('_', ' ');
+                    if (tz === currentTz) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            }
+
+            populateLocales() {
+                const select = document.getElementById('localeSelect');
+                const currentLocale = navigator.language || 'en-US';
+                
+                this.availableLocales.forEach(locale => {
+                    const option = document.createElement('option');
+                    option.value = locale.code;
+                    option.textContent = locale.name;
+                    if (locale.code === currentLocale) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                });
+            }
+
+            updateTimezoneInfo() {
+                const info = document.getElementById('timezoneInfo');
+                const now = new Date();
+                const timeStr = now.toLocaleString(this.locale, { 
+                    timeZone: this.timezone,
+                    weekday: 'long',
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    timeZoneName: 'short'
+                });
+                info.textContent = `Current date and time: ${timeStr}`;
+            }
+
+            updateCurrentTime() {
+                this.today = new Date();
+                this.updateTimezoneInfo();
+                
+                // Re-render to update "today" highlighting.
+                this.render();
+            }
+
+            formatDate(date, options = {}) {
+                return date.toLocaleDateString(this.locale, {
+                    timeZone: this.timezone,
+                    ...options
+                });
+            }
+
+            isSameDay(date1, date2) {
+                const d1 = new Date(date1.toLocaleString('en-CA', { timeZone: this.timezone }));
+                const d2 = new Date(date2.toLocaleString('en-CA', { timeZone: this.timezone }));
+                return d1.toDateString() === d2.toDateString();
+            }
+
+            setView(view) {
+                this.currentView = view;
+                
+                // Update active button.
+                document.querySelectorAll('.view-buttons .btn').forEach(btn => {
+                    btn.classList.remove('active');
+                });
+                document.querySelector(`[data-view="${view}"]`).classList.add('active');
+                
+                this.render();
+            }
+
+            navigatePeriod(direction) {
+                const current = new Date(this.currentDate);
+                
+                switch(this.currentView) {
+                    case 'daily':
+                        current.setDate(current.getDate() + direction);
+                        break;
+                    case 'weekly':
+                        current.setDate(current.getDate() + (direction * 7));
+                        break;
+                    case 'monthly':
+                        current.setMonth(current.getMonth() + direction);
+                        break;
+                    case 'yearly':
+                        current.setFullYear(current.getFullYear() + direction);
+                        break;
+                }
+                
+                this.currentDate = current;
+                this.render();
+            }
+
+            goToToday() {
+                this.currentDate = new Date();
+                this.render();
+            }
+
+            changeTimezone() {
+                const select = document.getElementById('timezoneSelect');
+                this.timezone = select.value === 'auto' ? 
+                    Intl.DateTimeFormat().resolvedOptions().timeZone : 
+                    select.value;
+                this.render();
+                this.updateTimezoneInfo();
+            }
+
+            changeLocale() {
+                const select = document.getElementById('localeSelect');
+                this.locale = select.value === 'auto' ? 
+                    navigator.language || 'en-US' : 
+                    select.value;
+                this.render();
+                this.updateTimezoneInfo();
+            }
+
+            render() {
+                const content = document.getElementById('calendarContent');
+                const period = document.getElementById('currentPeriod');
+
+                switch(this.currentView) {
+                    case 'daily':
+                        content.innerHTML = this.renderDailyView();
+                        period.textContent = this.formatDate(this.currentDate, { 
+                            weekday: 'long', 
+                            year: 'numeric', 
+                            month: 'long', 
+                            day: 'numeric' 
+                        });
+                        break;
+                    case 'weekly':
+                        content.innerHTML = this.renderWeeklyView();
+                        const weekStart = this.getWeekStart(this.currentDate);
+                        const weekEnd = new Date(weekStart);
+                        weekEnd.setDate(weekEnd.getDate() + 6);
+                        period.textContent = `${this.formatDate(weekStart, { month: 'short', day: 'numeric' })} - ${this.formatDate(weekEnd, { month: 'short', day: 'numeric', year: 'numeric' })}`;
+                        break;
+                    case 'monthly':
+                        content.innerHTML = this.renderMonthlyView();
+                        period.textContent = this.formatDate(this.currentDate, { 
+                            year: 'numeric', 
+                            month: 'long' 
+                        });
+                        break;
+                    case 'yearly':
+                        content.innerHTML = this.renderYearlyView();
+                        period.textContent = this.currentDate.getFullYear().toString();
+                        break;
+                }
+            }
+
+            renderDailyView() {
+                const dayName = this.formatDate(this.currentDate, { weekday: 'long' });
+                const dayDate = this.formatDate(this.currentDate, { year: 'numeric', month: 'long', day: 'numeric' });
+                
+                let html = `
+                    <div class="daily-view">
+                        <div class="daily-header">
+                            ${dayName}, ${dayDate}
+                        </div>
+                        <div class="current-time">
+                            ${new Date().toLocaleTimeString(this.locale, { 
+                                timeZone: this.timezone, 
+                                hour: '2-digit', 
+                                minute: '2-digit' 
+                            })}
+                        </div>
+                        <div class="time-grid">
+                `;
+
+                for (let hour = 0; hour < 24; hour++) {
+                    const timeStr = new Date(0, 0, 0, hour).toLocaleTimeString(this.locale, {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                    
+                    html += `
+                        <div class="hour-label">${timeStr}</div>
+                        <div class="hour-block" onclick="selectTimeSlot(${hour})"></div>
+                    `;
+                }
+
+                html += '</div></div>';
+                return html;
+            }
+
+            renderWeeklyView() {
+                const weekStart = this.getWeekStart(this.currentDate);
+                const days = [];
+                
+                for (let i = 0; i < 7; i++) {
+                    const day = new Date(weekStart);
+                    day.setDate(weekStart.getDate() + i);
+                    days.push(day);
+                }
+
+                let html = '<div class="week-view">';
+                
+                // Header row.
+                html += '<div class="time-slot">Time</div>';
+                days.forEach(day => {
+                    const isToday = this.isSameDay(day, this.today);
+                    html += `
+                        <div class="day-header ${isToday ? 'today' : ''}">
+                            ${this.formatDate(day, { weekday: 'short' })}<br>
+                            <small>${this.formatDate(day, { day: 'numeric' })}</small>
+                        </div>
+                    `;
+                });
+
+                // Time slots.
+                for (let hour = 8; hour <= 18; hour++) {
+                    const timeStr = new Date(0, 0, 0, hour).toLocaleTimeString(this.locale, {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                    });
+                    
+                    html += `<div class="time-slot">${timeStr}</div>`;
+                    
+                    days.forEach(day => {
+                        html += '<div class="hour-cell"></div>';
+                    });
+                }
+
+                html += '</div>';
+                return html;
+            }
+
+            renderMonthlyView() {
+                const year = this.currentDate.getFullYear();
+                const month = this.currentDate.getMonth();
+                const firstDay = new Date(year, month, 1);
+                const lastDay = new Date(year, month + 1, 0);
+                const startDate = this.getWeekStart(firstDay);
+                
+                let html = '<div class="month-view">';
+                
+                // Day headers.
+                const dayNames = [];
+                for (let i = 0; i < 7; i++) {
+                    const day = new Date(startDate);
+                    day.setDate(startDate.getDate() + i);
+                    dayNames.push(this.formatDate(day, { weekday: 'short' }));
+                }
+                
+                dayNames.forEach(dayName => {
+                    html += `<div class="day-header">${dayName}</div>`;
+                });
+
+                // Calendar days.
+                const current = new Date(startDate);
+                for (let week = 0; week < 6; week++) {
+                    for (let day = 0; day < 7; day++) {
+                        const isCurrentMonth = current.getMonth() === month;
+                        const isToday = this.isSameDay(current, this.today);
+                        const dayNum = current.getDate();
+                        
+                        html += `
+                            <div class="day-cell ${!isCurrentMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}" 
+                                 onclick="selectDate('${current.toISOString()}')">
+                                <div class="day-number">${dayNum}</div>
+                            </div>
+                        `;
+                        
+                        current.setDate(current.getDate() + 1);
+                    }
+                }
+
+                html += '</div>';
+                return html;
+            }
+
+            renderYearlyView() {
+                const year = this.currentDate.getFullYear();
+                let html = '<div class="year-view">';
+
+                for (let month = 0; month < 12; month++) {
+                    html += this.renderMiniMonth(year, month);
+                }
+
+                html += '</div>';
+                return html;
+            }
+
+            renderMiniMonth(year, month) {
+                const monthName = new Date(year, month, 1).toLocaleDateString(this.locale, { 
+                    month: 'long',
+                    timeZone: this.timezone
+                });
+                const firstDay = new Date(year, month, 1);
+                const startDate = this.getWeekStart(firstDay);
+                
+                let html = `
+                    <div class="mini-month">
+                        <div class="mini-month-header">${monthName}</div>
+                        <div class="mini-calendar">
+                `;
+
+                // Day headers.
+                for (let i = 0; i < 7; i++) {
+                    const day = new Date(startDate);
+                    day.setDate(startDate.getDate() + i);
+                    const dayName = this.formatDate(day, { weekday: 'narrow' });
+                    html += `<div class="mini-day" style="font-weight: bold; background: var(--light-gray);">${dayName}</div>`;
+                }
+
+                // Calendar days.
+                const current = new Date(startDate);
+                for (let week = 0; week < 6; week++) {
+                    let hasCurrentMonthDay = false;
+                    for (let day = 0; day < 7; day++) {
+                        const isCurrentMonth = current.getMonth() === month;
+                        const isToday = this.isSameDay(current, this.today);
+                        const dayNum = current.getDate();
+                        
+                        if (isCurrentMonth) hasCurrentMonthDay = true;
+                        
+                        html += `
+                            <div class="mini-day ${!isCurrentMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}" 
+                                 onclick="goToDate('${current.toISOString()}')">
+                                ${dayNum}
+                            </div>
+                        `;
+                        
+                        current.setDate(current.getDate() + 1);
+                    }
+                    
+                    if (!hasCurrentMonthDay) break;
+                }
+
+                html += '</div></div>';
+                return html;
+            }
+
+            getWeekStart(date) {
+                const d = new Date(date);
+                const day = d.getDay();
+                const diff = d.getDate() - day;
+                return new Date(d.setDate(diff));
+            }
+        }
+
+        // Initialize the calendar.
+        let calendar;
+        
+        document.addEventListener('DOMContentLoaded', function() {
+            calendar = new ModernCalendar();
+        });
+
+        // Global functions for HTML event handlers.
+        function setView(view) {
+            calendar.setView(view);
+        }
+
+        function navigatePeriod(direction) {
+            calendar.navigatePeriod(direction);
+        }
+
+        function goToToday() {
+            calendar.goToToday();
+        }
+
+        function changeTimezone() {
+            calendar.changeTimezone();
+        }
+
+        function changeLocale() {
+            calendar.changeLocale();
+        }
+
+        function selectDate(dateStr) {
+            calendar.currentDate = new Date(dateStr);
+            calendar.setView('daily');
+        }
+
+        function goToDate(dateStr) {
+            calendar.currentDate = new Date(dateStr);
+            calendar.setView('monthly');
+        }
+
+        function selectTimeSlot(hour) {
+            // Placeholder for future event creation functionality.
+            alert(`Selected time slot: ${hour}:00`);
+        }
+
+        function toggleTheme() {
+            calendar.toggleTheme();
+        }
+    </script>
+</body>
+</html>
